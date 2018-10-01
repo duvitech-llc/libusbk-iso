@@ -140,8 +140,12 @@ int main(int argc, char* argv[]) {
 	KOVL_POOL_HANDLE ovlPool = NULL;
 	int len = _acDarwin_len;
 	uint8_t* ptr = (uint8_t*)_acDarwin;
-	
-	fileptr = fopen("map.jpg", "rb");  // Open the file in binary mode
+	if (argc > 1) {
+		fileptr = fopen(argv[1], "rb");  // Open the file in binary mode
+	}
+	else {
+		fileptr = fopen("radar.jpg", "rb");  // Open the file in binary mode
+	}
 	fseek(fileptr, 0, SEEK_END);          // Jump to the end of the file
 	filelen = ftell(fileptr);             // Get the current byte offset in the file
 	rewind(fileptr);                      // Jump back to the beginning of the file
