@@ -1,19 +1,24 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "libusbk.h"
 
-#define USBD_VID     0x0483
-#define USBD_PID_HS     0x2E18
+#define USBD_VID     0x2DC4
+#define USBD_PID_HS     0x0200
 
-#define EP_TRANSFER				0x02
+#define EP1_TRANSFER				0x01
+
 #define EP_PACKET_SIZE			1024
-#define ISO_PACKETS_PER_XFER	32
+#define ISO_PACKETS_PER_XFER	21
 
 
 #define ISO_CALC_CONTEXT_SIZE(mNumOfIsoPackets) (sizeof(KISO_CONTEXT)+(sizeof(KISO_PACKET)*(mNumOfIsoPackets)))
 #define ISO_CALC_DATABUFFER_SIZE(mNumOfIsoPackets, mIsoPacketSize) (mNumOfIsoPackets*mIsoPacketSize)
+
+
+
 BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
 	KLST_DEVINFO_HANDLE* DeviceInfo,
 	int argc,
@@ -109,14 +114,20 @@ BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
 
 }
 
+extern const unsigned char _acDarwin[];
+extern const unsigned int _acDarwin_len;
 int main(int argc, char* argv[]) {
+	
+	FILE *fileptr;
+	char *buffer;
+	long filelen;
 
 	printf("LIBUSBK Demo\n");
 	KLST_HANDLE deviceList = NULL;
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 	KUSB_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
-	UCHAR pipeID = EP_TRANSFER;
+	UCHAR pipeID = EP1_TRANSFER;
 
 	BOOL success;
 	UCHAR dataBuffer[ISO_CALC_DATABUFFER_SIZE(ISO_PACKETS_PER_XFER, EP_PACKET_SIZE)];
@@ -127,6 +138,17 @@ int main(int argc, char* argv[]) {
 	LONG posPacket;
 	ULONG currentFrameNumber;
 	KOVL_POOL_HANDLE ovlPool = NULL;
+	int len = _acDarwin_len;
+	uint8_t* ptr = (uint8_t*)_acDarwin;
+	
+	fileptr = fopen("map.jpg", "rb");  // Open the file in binary mode
+	fseek(fileptr, 0, SEEK_END);          // Jump to the end of the file
+	filelen = ftell(fileptr);             // Get the current byte offset in the file
+	rewind(fileptr);                      // Jump back to the beginning of the file
+
+	buffer = (char *)malloc((filelen + 1) * sizeof(char)); // Enough memory for file + \0
+	fread(buffer, filelen, 1, fileptr); // Read in the entire file
+	fclose(fileptr); // Close the file
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -145,8 +167,14 @@ int main(int argc, char* argv[]) {
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
+	for (int z = 0; z < 1; z++) {
+		UINT Length = 0;
+		UsbK_WritePipe(handle, EP1_TRANSFER, buffer, filelen, &Length, NULL);
 
-
+		printf("Transferred %d bytes!\n", Length);
+		Sleep(33);
+	}
+#if 0
 	/*
 	Initialize a new iso context handle.
 	*/
@@ -156,19 +184,17 @@ int main(int argc, char* argv[]) {
 	Set the iso packet offsets.
 	*/
 	IsoK_SetPackets(isoCtx, EP_PACKET_SIZE);
-
+	
 	/*
 	Initialize a new OvlK pool handle.
 	*/
 	OvlK_Init(&ovlPool, handle, 4, 0);
 	OvlK_Acquire(&ovlkHandle, ovlPool);
-	UsbK_ResetPipe(handle, pipeID);
-
+	UsbK_ResetPipe(handle, EP1_TRANSFER);
 
 	// UsbK_IsoReadPipe(handle, pipeID, dataBuffer, sizeof(dataBuffer), ovlkHandle, isoCtx);
-	UsbK_IsoWritePipe(handle, pipeID, dataBuffer, sizeof(dataBuffer), ovlkHandle, isoCtx);
+	UsbK_IsoWritePipe(handle, EP1_TRANSFER, _acDarwin, _acDarwin_len, ovlkHandle, isoCtx);
 	success = OvlK_WaitAndRelease(ovlkHandle, 1000, &transferred);
-
 	if (!success)
 	{
 		errorCode = GetLastError();
@@ -196,6 +222,7 @@ int main(int argc, char* argv[]) {
 		if ((posByte & 0xF) != 0xF) printf("\n");
 	}
 */
+#endif
 
 Done:
 
