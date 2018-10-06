@@ -8,7 +8,7 @@
 #define USBD_VID     0x2DC4
 #define USBD_PID_HS     0x0200
 
-#define EP1_TRANSFER				0x01
+#define EP1_TRANSFER				0x06
 
 #define EP_PACKET_SIZE			1024
 #define ISO_PACKETS_PER_XFER	21
@@ -141,6 +141,7 @@ int main(int argc, char* argv[]) {
 	int len = _acDarwin_len;
 	uint8_t* ptr = (uint8_t*)_acDarwin;
 	if (argc > 1) {
+		printf("opent %s\r\n", argv[1]);
 		fileptr = fopen(argv[1], "rb");  // Open the file in binary mode
 	}
 	else {
